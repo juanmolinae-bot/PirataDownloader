@@ -1,12 +1,5 @@
 name: Compilar APK de PirataDownloader
 
-# Este workflow compila el APK automáticamente en la nube de GitHub.
-# Uso:
-#   1. Crea un repositorio en GitHub y sube la carpeta android/ (con
-#      main.py, buildozer.spec, downloader_core.py e icon.png dentro).
-#   2. Ve a la pestaña "Actions" y ejecuta este workflow.
-#   3. Al terminar, descarga el APK desde "Artifacts" del build.
-
 on:
   workflow_dispatch:
   push:
@@ -19,15 +12,45 @@ jobs:
       - name: Descargar código
         uses: actions/checkout@v4
 
-      - name: Compilar con Buildozer
-        uses: ArtemSBulgakov/buildozer-action@v1
-        id: buildozer
+      - name: Configurar Python
+        uses: actions/setup-python@v5
         with:
-          workdir: .
-          buildozer_version: stable
+          python-version: '3.11'
+
+      - name: Configurar Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Instalar dependencias del sistema
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y git zip unzip openjdk-17-jdk \
+            autoconf libtool pkg-config zlib1g-dev libncurses5-dev \
+            libncursesw5-dev libtinfo6 cmake libffi-dev libssl-dev \
+            automake gettext
+
+      - name: Instalar Buildozer
+        run: |
+          pip install --upgrade pip
+          pip install --upgrade buildozer cython setuptools
+
+      - name: Cachear SDK/NDK de Android
+        uses: actions/cache@v4
+        with:
+          path: ~/.buildozer
+          key: buildozer-${{ runner.os }}-${{ hashFiles('buildozer.spec') }}
+
+      - name: Compilar APK
+        run: |
+          yes | buildozer android debug
+        env:
+          BUILDOZER_LOG_LEVEL: 2
 
       - name: Subir el APK generado
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: PirataDownloader-apk
-          path: ${{ steps.buildozer.outputs.filename }}
+          path: bin/*.apk
