@@ -1,0 +1,33 @@
+name: Compilar APK de PirataDownloader
+
+# Este workflow compila el APK automáticamente en la nube de GitHub.
+# Uso:
+#   1. Crea un repositorio en GitHub y sube la carpeta android/ (con
+#      main.py, buildozer.spec, downloader_core.py e icon.png dentro).
+#   2. Ve a la pestaña "Actions" y ejecuta este workflow.
+#   3. Al terminar, descarga el APK desde "Artifacts" del build.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar código
+        uses: actions/checkout@v4
+
+      - name: Compilar con Buildozer
+        uses: ArtemSBulgakov/buildozer-action@v1
+        id: buildozer
+        with:
+          workdir: .
+          buildozer_version: stable
+
+      - name: Subir el APK generado
+        uses: actions/upload-artifact@v4
+        with:
+          name: PirataDownloader-apk
+          path: ${{ steps.buildozer.outputs.filename }}
